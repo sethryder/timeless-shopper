@@ -1,0 +1,11 @@
+`npm run build` downloads and redistributes (in web/lut/ and web/data.json):
+
+Path of Building Community — timeless jewel lookup tables, LegionPassives.lua, NodeIndexMapping.lua
+https://github.com/PathOfBuildingCommunity/PathOfBuilding
+MIT License, Copyright (c) 2016 David Gowor
+
+Passive tree export — https://github.com/grindinggear/skilltree-export
+Game data (c) Grinding Gear Games. This project is not affiliated with or endorsed by Grinding Gear Games.
+
+Fonts in web/fonts/ — Alegreya Sans (Copyright 2013 The Alegreya Sans Project Authors) and Cormorant Garamond
+(Copyright 2015 The Cormorant Project Authors). SIL Open Font License 1.1; full text in web/fonts/OFL-*.txt.

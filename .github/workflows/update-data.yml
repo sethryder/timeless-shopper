@@ -1,0 +1,41 @@
+# Daily: if GGG's tree export or Path of Building's timeless jewel data changed upstream, bump the pins in
+# build.mjs, rebuild, test, and open (or refresh) one PR. A failed build or test fails this run, which emails you.
+name: update-data
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+concurrency: update-data
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - id: pins
+        run: node scripts/update-pins.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - if: steps.pins.outputs.changed == 'true'
+        run: npm run build && npm test
+      - if: steps.pins.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TITLE: ${{ steps.pins.outputs.title }}
+          BODY: ${{ steps.pins.outputs.body }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898231+github-actions[bot]@users.noreply.github.com'
+          git switch -C update-data
+          git commit -am "$TITLE"
+          git push --force origin update-data
+          if [ "$(gh pr view update-data --json state -q .state 2>/dev/null)" = OPEN ]; then
+            gh pr edit update-data --title "$TITLE" --body "$BODY"
+          else
+            gh pr create --head update-data --title "$TITLE" --body "$BODY"
+          fi

@@ -1,0 +1,14 @@
+{
+  "name": "timeless-shopper",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node serve.mjs",
+    "test": "node test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

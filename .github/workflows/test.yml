@@ -1,0 +1,20 @@
+name: test
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Upstream downloads (~40 MB) are cached per pinned commit inside .cache/, so old entries are simply unused.
+      - uses: actions/cache@v4
+        with:
+          path: .cache
+          key: upstream-${{ hashFiles('build.mjs') }}
+          restore-keys: upstream-
+      - run: npm run build
+      - run: npm test

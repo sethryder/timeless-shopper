@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Timeless Jewel Finder for Path of Exile | Timeless Shopper</title>
+<meta name="description" content="Find Path of Exile timeless jewel seeds that put the notables you want near your passive tree, then open trade searches and check live prices.">
+<link rel="canonical" href="https://timeless.washclof.com/">
+<meta name="theme-color" content="#12151f">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Timeless Shopper">
+<meta property="og:url" content="https://timeless.washclof.com/">
+<meta property="og:title" content="Timeless Shopper: find and price timeless jewels">
+<meta property="og:description" content="Pick a socket and the notables you want. See every seed that gives them within reach of your tree, with trade links and live prices.">
+<meta property="og:image" content="https://timeless.washclof.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A jewel socket's radius on the passive tree, with matching notables highlighted">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"Timeless Shopper","url":"https://timeless.washclof.com/",
+ "applicationCategory":"GameApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},
+ "description":"Path of Exile timeless jewel seed finder and price checker for Elegant Hubris, Glorious Vanity, Lethal Pride, Brutal Restraint, Militant Faith and Heroic Tragedy."}
+</script>
+<link rel="preload" href="fonts/AlegreyaSans-400.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+  /* Self-hosted (SIL OFL 1.1, see fonts/OFL-*.txt): no third-party requests from visitors' browsers. */
+  @font-face { font-family: 'Alegreya Sans'; font-weight: 400; font-display: swap; src: url(fonts/AlegreyaSans-400.woff2) format('woff2'); }
+  @font-face { font-family: 'Alegreya Sans'; font-weight: 500; font-display: swap; src: url(fonts/AlegreyaSans-500.woff2) format('woff2'); }
+  @font-face { font-family: 'Alegreya Sans'; font-weight: 700; font-display: swap; src: url(fonts/AlegreyaSans-700.woff2) format('woff2'); }
+  @font-face { font-family: 'Cormorant Garamond'; font-weight: 600 700; font-display: swap; src: url(fonts/CormorantGaramond.woff2) format('woff2'); }
+  :root {
+    --night: #12151f; --slate: #191d2a; --raise: #222838; --rule: #2d3347;
+    --text: #e9e3d3; --muted: #a29d8c; --brass: #d2a95f; --brass-dim: #8d7140;
+    --amethyst: #c897ff; --verdigris: #5ec4a6; --sapphire: #7097e6;
+    --serif: 'Cormorant Garamond', Georgia, serif; --sans: 'Alegreya Sans', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--night); color: var(--text); font: 15px/1.45 var(--sans);
+    display: grid; grid-template-columns: 360px minmax(0, 1fr) 420px; grid-template-areas: 'setup tree results';
+  }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+  /* --- panels --- */
+  .panel { background: var(--slate); overflow-y: auto; padding: 22px 20px 28px; }
+  #setup { grid-area: setup; border-right: 1px solid var(--rule); }
+  #resultsPanel { grid-area: results; border-left: 1px solid var(--rule); }
+  h1 { font: 700 30px/1 var(--serif); color: var(--brass); margin: 0 0 6px; letter-spacing: .01em; }
+  .lede { color: var(--muted); margin: 0 0 22px; font-size: 14px; }
+  h2 { font: 700 20px/1.2 var(--serif); margin: 0; }
+  section + section { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--rule); }
+  .field { display: block; font-size: 13px; font-weight: 500; color: var(--muted); margin: 14px 0 5px; }
+  h2 + .field { margin-top: 10px; }
+  .note { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+  .note:empty { display: none; }
+  .note a, #links a { color: var(--brass); }
+
+  input:not([type=checkbox]), select {
+    width: 100%; background: var(--night); border: 1px solid var(--rule); border-radius: 6px; padding: 7px 10px; min-width: 0;
+  }
+  input::placeholder { color: #6f6c62; }
+  input:hover, select:hover { border-color: #3d4560; }
+  .btn { border: 0; border-radius: 6px; padding: 7px 12px; background: var(--raise); cursor: pointer; white-space: nowrap; }
+  .btn:hover { background: #2c3348; }
+  .btn.primary { background: var(--brass); color: #1b1608; font-weight: 700; }
+  .btn.primary:hover { background: #e0b96e; }
+  .btn:disabled { opacity: .6; cursor: progress; }
+  .inline { display: flex; gap: 8px; align-items: center; }
+  .icon-btn { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1; padding: 2px 6px; border-radius: 4px; }
+  .icon-btn:hover { color: var(--text); background: var(--raise); }
+
+  /* --- wanted notables --- */
+  .picker { position: relative; }
+  #suggest {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 5; max-height: 340px; overflow-y: auto;
+    background: var(--night); border: 1px solid var(--brass-dim); border-radius: 6px; box-shadow: 0 12px 28px #0008;
+  }
+  #suggest div { padding: 6px 10px; cursor: pointer; }
+  #suggest div.hl, #suggest div:hover { background: var(--raise); }
+  #suggest b { display: block; font: 700 17px/1.2 var(--serif); }
+  #suggest span { color: var(--muted); font-size: 13px; }
+  #wanted { margin-top: 10px; display: grid; gap: 8px; }
+  .want { background: var(--night); border: 1px solid var(--rule); border-left: 3px solid var(--amethyst); border-radius: 6px; padding: 8px 8px 9px 11px; }
+  .want-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .want-name { font: 700 18px/1.2 var(--serif); }
+  .want-stats { color: var(--muted); font-size: 13px; margin: 1px 0 7px; }
+  .want-opts { display: flex; gap: 12px; align-items: center; font-size: 13px; color: var(--muted); }
+  .want-opts label { display: flex; gap: 6px; align-items: center; cursor: pointer; white-space: nowrap; }
+  .want-opts label:last-child { margin-left: auto; }
+  .want-opts input[type=number] { width: 42px; padding: 4px 4px; text-align: center; -moz-appearance: textfield; appearance: textfield; }
+  .want-opts input::-webkit-inner-spin-button { display: none; }
+  input[type=checkbox] { accent-color: var(--brass); width: 15px; height: 15px; margin: 0; }
+
+  /* --- results --- */
+  .results-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  #status { color: var(--muted); font-size: 14px; text-align: right; }
+  .trade-row { display: flex; gap: 8px; align-items: end; margin-top: 12px; }
+  .trade-row > div { flex: 1; min-width: 0; }
+  .trade-row .field { margin-top: 0; }
+  #links { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 10px; font-size: 14px; }
+  #links:empty { display: none; }
+  #results { list-style: none; margin: 16px 0 0; padding: 0; }
+  #results li { padding: 9px 10px; border-radius: 6px; cursor: pointer; border: 1px solid transparent; }
+  #results li + li { border-top-color: var(--rule); border-radius: 0; }
+  #results li:hover { background: var(--raise); border-radius: 6px; }
+  #results li.sel { background: #2a2440; border-color: var(--amethyst); border-radius: 6px; }
+  #results li:hover + li, #results li.sel + li { border-top-color: transparent; }
+  .r-top { display: flex; align-items: baseline; gap: 12px; font-variant-numeric: tabular-nums; }
+  .r-seed { font-weight: 700; font-size: 17px; min-width: 64px; }
+  .r-pts { color: var(--muted); }
+  .r-score { color: var(--muted); font-size: 13px; }
+  .r-price { margin-left: auto; text-align: right; }
+  .r-price .none { color: var(--muted); }
+  .r-price button { margin-left: 6px; font-size: 12px; padding: 2px 8px; }
+  .r-trade { color: var(--brass); font-size: 13px; }
+  .r-trade:hover { color: #e8c47f; }
+  .r-hits { margin-top: 3px; font-size: 14px; color: var(--muted); }
+  .r-hits b { color: var(--text); font-weight: 500; }
+  .empty { color: var(--muted); margin: 18px 0 0; }
+  .about { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 13px; }
+  .about p { margin: 0 0 8px; }
+  .about a { color: var(--brass); }
+  #pinned { margin-top: 14px; padding: 10px 12px; border: 1px dashed var(--brass-dim); border-radius: 6px; cursor: pointer; }
+  #pinned.sel { border: 1px solid var(--amethyst); background: #2a2440; }
+  #pinned .p-title { font: 700 18px/1.2 var(--serif); }
+  #pinned .p-title small { font: 400 13px var(--sans); color: var(--muted); margin-left: 6px; }
+  #pinned .r-hits { margin-top: 4px; }
+  .chips { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 5px; }
+  .chips .note { flex-basis: 100%; margin: 0 0 2px; }
+  .chip { border: 1px solid var(--rule); background: var(--night); border-radius: 999px; padding: 2px 10px; font-size: 13px; cursor: pointer; }
+  .chip small { color: var(--muted); }
+  .chip:hover { border-color: var(--brass-dim); }
+  .chip.on { border-color: var(--amethyst); background: #3a2d5c; }
+  .similar { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--rule); cursor: default; }
+  .sim-head { font-size: 14px; }
+  .sim-head a { color: var(--brass); }
+  .sim-head .btn { font-size: 13px; padding: 3px 10px; margin-top: 6px; }
+  .sim-list { list-style: none; margin: 6px 0 0; padding: 0; }
+  .sim-list li { padding: 6px 4px; border-top: 1px solid var(--rule); cursor: pointer; }
+  .sim-list li:hover { background: var(--raise); }
+  .sim-list li.sel { background: #2a2440; }
+
+  /* --- tree --- */
+  main { grid-area: tree; position: relative; overflow: hidden; background: radial-gradient(ellipse at 50% 40%, #171b29, var(--night) 70%); }
+  svg { width: 100%; height: 100%; display: block; }
+  svg:not(.zoomed) { touch-action: none; } svg.panning { cursor: grabbing; } svg.panning * { cursor: grabbing !important; }
+  .overlay { position: absolute; background: #12151fe6; border: 1px solid var(--rule); border-radius: 8px; }
+  #back { position: absolute; top: 14px; left: 14px; }
+  #emptyTree { bottom: 14px; left: 50%; transform: translateX(-50%); padding: 8px 14px; color: var(--text); white-space: nowrap; }
+  #legend { left: 50%; transform: translateX(-50%); bottom: 12px; padding: 7px 12px; font-size: 13px; color: var(--muted); width: max-content; max-width: calc(100% - 28px); text-align: center; }
+  #legend ul { list-style: none; margin: 0 0 3px; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 3px 16px; }
+  #legend li { display: flex; align-items: center; gap: 7px; color: var(--text); }
+  #legend i { width: 11px; height: 11px; border-radius: 50%; flex: none; }
+  #legend p { margin: 0; }
+  .sw-socket { background: var(--sapphire); } .sw-own-ring { box-shadow: 0 0 0 2px var(--brass); } .sw-own { background: var(--brass); }
+  .sw-accept { border: 2px solid var(--verdigris); background: #8f8670; } .sw-hit { background: var(--amethyst); box-shadow: 0 0 6px var(--amethyst); }
+
+  .edge { stroke: #2b3144; stroke-width: 12; }
+  .edge.own { stroke: var(--brass-dim); }
+  .node { fill: #434a60; transition: opacity .2s; }
+  .node.n { fill: #8f8670; } .node.k { fill: #b99556; }
+  .node.j { fill: var(--sapphire); cursor: pointer; }
+  .node.j:hover { fill: #9ab7f2; }
+  .node.j.sel { fill: #a9c4ff; }
+  .node.j.own { fill: var(--sapphire); stroke: var(--brass); stroke-width: 2.5px; vector-effect: non-scaling-stroke; } /* a socket in your tree is still a socket */
+  .node.j.own.sel { fill: #a9c4ff; }
+  .node.in { cursor: pointer; }
+  .node.taken, .node.own { fill: var(--brass); }
+  .node.accept { stroke: var(--verdigris); stroke-width: 18; }
+  .node.hit { fill: var(--amethyst); filter: drop-shadow(0 0 30px var(--amethyst)); }
+  svg.zoomed .edge:not(.in), svg.zoomed .node:not(.in):not(.sel) { opacity: .28; }
+  svg:not(.zoomed) .node.j { animation: beckon 1.6s ease-in-out 3; }
+  @keyframes beckon { 50% { fill: #c4d6ff; } }
+  @media (prefers-reduced-motion: reduce) { svg .node.j { animation: none !important; } .node { transition: none; } }
+
+  .ring { fill: #7097e60d; stroke: var(--brass); stroke-width: 7; }
+  .ring-outer { fill: none; stroke: var(--brass-dim); stroke-width: 4; }
+  .ticks { stroke: var(--brass-dim); stroke-width: 5; fill: none; }
+  .label { fill: var(--text); font: 500 68px var(--sans); text-anchor: middle; pointer-events: none; paint-order: stroke; stroke: var(--night); stroke-width: 12px; }
+  .label.hit { fill: var(--amethyst); font-weight: 700; }
+  .label.dist { fill: var(--muted); font-size: 48px; }
+
+  #tip { position: absolute; max-width: 320px; background: #0e1018f2; border: 1px solid var(--brass-dim); border-radius: 6px; padding: 8px 11px; font-size: 14px; pointer-events: none; box-shadow: 0 10px 24px #0009; z-index: 4; }
+  #tip b { display: block; font: 700 19px/1.15 var(--serif); color: var(--brass); margin-bottom: 3px; }
+  #tip b.new { color: var(--amethyst); }
+  #tip .add { color: #9fbcff; }
+  #tip .was, #tip .pts { color: var(--muted); font-size: 13px; margin-top: 5px; }
+  #tip .pts { margin-top: 2px; }
+
+  /* --- layout: three columns wide, one sidebar mid-size, stacked on phones --- */
+  body { height: 100vh; overflow: hidden; }
+  .sidecol { display: contents; }
+  @media (max-width: 1279px) {
+    body { grid-template-columns: 380px minmax(0, 1fr); grid-template-areas: 'side tree'; }
+    .sidecol { display: block; grid-area: side; overflow-y: auto; background: var(--slate); border-right: 1px solid var(--rule); }
+    .sidecol > .panel { overflow: visible; border: 0; }
+    #resultsPanel { border-top: 1px solid var(--rule); margin: 0 20px; padding: 20px 0 28px; }
+  }
+  @media (max-width: 759px) {
+    body { display: flex; flex-direction: column; height: auto; overflow: visible; }
+    .sidecol { display: contents; }
+    #setup { order: 1; } main { order: 2; height: 65vh; flex: none; border-block: 1px solid var(--rule); } #resultsPanel { order: 3; margin: 0; padding: 20px 16px 28px; border: 0; }
+    .panel { padding-inline: 16px; }
+    #legend p { display: none; }
+    #legend { max-width: calc(100% - 28px); }
+    #emptyTree { white-space: normal; width: max-content; max-width: calc(100% - 28px); text-align: center; }
+  }
+</style>
+</head>
+<body>
+<div class="sidecol">
+<aside id="setup" class="panel">
+  <h1>Timeless Shopper</h1>
+  <p class="lede">Find the timeless jewel seeds that put the notables you want close to your tree, then check what's for sale.</p>
+
+  <section>
+    <h2>Your build</h2>
+    <label class="field" for="tree-in">Your account name (Name#1234), a PoB code, or a pobb.in, maxroll, poe.ninja or tree link</label>
+    <div class="inline">
+      <input id="tree-in" placeholder="Optional" autocomplete="off">
+      <button class="btn" id="importBtn">Import</button>
+      <button class="icon-btn" id="clearImport" aria-label="Clear imported tree" title="Clear imported tree" hidden>×</button>
+    </div>
+    <select id="charSel" hidden aria-label="Character" style="margin-top:8px"></select>
+    <p id="importStatus" class="note"></p>
+  </section>
+
+  <section>
+    <h2>Jewel</h2>
+    <label class="field" for="jewel">Type</label>
+    <select id="jewel"></select>
+    <label class="field" for="conq">Conqueror, which sets the keystone</label>
+    <select id="conq"></select>
+    <label class="field" for="jewelIn">Have one in mind? Paste its item text, or type a seed and conqueror</label>
+    <div class="inline">
+      <input id="jewelIn" placeholder="52540 Caspiro" autocomplete="off">
+      <button class="btn" id="jewelBtn">Show</button>
+    </div>
+    <p id="jewelStatus" class="note"></p>
+  </section>
+
+  <section>
+    <h2>Notables you want</h2>
+    <label class="field" for="add">Search by name or effect</label>
+    <div class="picker inline">
+      <input id="add" placeholder="Slum Lord, minion, armour…" autocomplete="off" role="combobox" aria-controls="suggest" aria-expanded="false">
+      <button class="btn" id="addBtn">Add</button>
+      <div id="suggest" role="listbox" hidden></div>
+    </div>
+    <div id="wanted"></div>
+    <label class="field" for="maxDist">Max points away, unless a notable sets its own</label>
+    <input id="maxDist" type="number" min="0" placeholder="Any distance">
+  </section>
+
+  <footer class="about">
+    <p>Works with all six timeless jewels: Elegant Hubris, Glorious Vanity, Lethal Pride, Brutal Restraint, Militant Faith and Heroic Tragedy. Seed data comes from <a href="https://github.com/PathOfBuildingCommunity/PathOfBuilding" rel="noopener">Path of Building</a>.</p>
+    <p>Timeless Shopper is a fan project. It isn't affiliated with or endorsed by Grinding Gear Games.</p>
+  </footer>
+  <noscript><p class="note">This tool runs in your browser and needs JavaScript turned on.</p></noscript>
+</aside>
+
+<aside id="resultsPanel" class="panel" aria-live="polite">
+  <div class="results-head"><h2>Seeds</h2><span id="status">Loading…</span></div>
+  <div class="trade-row">
+    <div><label class="field" for="league">League</label><select id="league"><option>Standard</option></select></div>
+    <button class="btn primary" id="priceBtn" hidden>Check prices</button>
+  </div>
+  <p id="priceStatus" class="note"></p>
+  <div id="pinned" hidden></div>
+  <div id="links"></div>
+  <ol id="results"></ol>
+  <p id="emptyResults" class="empty"></p>
+</aside>
+</div>
+
+<main>
+  <svg id="tree" xmlns="http://www.w3.org/2000/svg" aria-label="Passive skill tree"></svg>
+  <button class="btn" id="back" hidden>Whole tree</button>
+  <div id="emptyTree" class="overlay">Click a blue jewel socket to see what fits there. Scroll to zoom, drag to move.</div>
+  <div id="legend" class="overlay" hidden>
+    <ul>
+      <li><i class="sw-socket"></i>Jewel socket</li>
+      <li><i class="sw-socket sw-own-ring"></i>Socket in your tree</li>
+      <li><i class="sw-own"></i>Your tree or taken</li>
+      <li><i class="sw-accept"></i>Accepted</li>
+      <li><i class="sw-hit"></i>Match for the picked seed</li>
+    </ul>
+    <p>Click a node in the ring to mark it taken (distances count from it), again to accept it at any distance, again to clear.</p>
+  </div>
+  <div id="tip" hidden></div>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>
