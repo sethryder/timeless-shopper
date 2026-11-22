@@ -6,9 +6,10 @@ import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 import { extname, join, normalize } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { rawBuildUrl, ACCOUNT } from './web/importer.js';
 
-const root = new URL('./web/', import.meta.url).pathname;
+const root = fileURLToPath(new URL('./web/', import.meta.url));
 const types = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json', '.zip': 'application/octet-stream',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml',
@@ -34,7 +35,8 @@ const poe = (path, init = {}) => {
     const waitMs = readyAt - Date.now();
     if (waitMs > 30_000) throw Object.assign(new Error('Rate limited by the trade API'), { status: 429, retryAfter: Math.ceil(waitMs / 1000) });
     await new Promise((ok) => setTimeout(ok, Math.max(0, waitMs)));
-    const res = await fetch(POE + path, { ...init, headers: { 'user-agent': UA, 'content-type': 'application/json', ...init.headers } });
+    // One stalled answer holds up every visitor's queued call, so don't wait out undici's 5-minute default.
+    const res = await fetch(POE + path, { signal: AbortSignal.timeout(15_000), ...init, headers: { 'user-agent': UA, 'content-type': 'application/json', ...init.headers } });
     const wait = res.status === 429 ? Number(res.headers.get('retry-after')) || 60 : waitFromHeaders(res.headers.get('x-rate-limit-ip'), res.headers.get('x-rate-limit-ip-state'));
     readyAt = Date.now() + wait * 1000;
     const body = await res.json().catch(() => ({}));
@@ -129,8 +131,8 @@ export async function prices({ league, statId, seeds }, search = searchSeeds) {
 
 const readJson = (req) => new Promise((ok, fail) => {
   let body = '';
-  req.on('data', (c) => { body += c; if (body.length > 10_000) { fail(new Error('body too large')); req.destroy(); } });
-  req.on('end', () => { try { ok(JSON.parse(body)); } catch (e) { fail(e); } });
+  req.on('data', (c) => { body += c; if (body.length > 10_000) { fail(Object.assign(new Error('body too large'), { status: 413 })); req.destroy(); } });
+  req.on('end', () => { try { ok(JSON.parse(body)); } catch { fail(Object.assign(new Error('body is not JSON'), { status: 400 })); } });
 });
 
 const PRIVATE = Object.assign(new Error("That account's characters are private, or it doesn't exist"), { status: 404 });
@@ -154,11 +156,11 @@ async function api(req, res, path) {
       return send(res, 200, leagues);
     }
     if (path === '/api/build' && req.method === 'GET') {
-      // Only fixed hosts: rawBuildUrl rebuilds the URL from a matched id, so this can't be pointed elsewhere.
+      // Only fixed hosts: rawBuildUrl rebuilds the URL from a matched id, and redirects are refused, so this can't be pointed elsewhere.
       const raw = rawBuildUrl(new URL(req.url, 'http://x').searchParams.get('url') ?? '');
       if (!raw) return send(res, 400, { error: 'unsupported build link' });
       const code = await cached(raw, 600_000, async () => {
-        const r = await fetch(raw, { headers: { 'user-agent': UA }, signal: AbortSignal.timeout(15_000) });
+        const r = await fetch(raw, { headers: { 'user-agent': UA }, redirect: 'error', signal: AbortSignal.timeout(15_000) });
         const text = (await r.text()).trim();
         if (!r.ok || !/^[\w=-]{20,}$/.test(text)) throw Object.assign(new Error(`couldn't get a build code from that link (${r.status})`), { status: 404 });
         return text;
@@ -186,7 +188,9 @@ async function api(req, res, path) {
       return send(res, 200, { classId: body.character, nodes: body.hashes ?? [] });
     }
     if (path === '/api/prices' && req.method === 'POST') {
-      const { league, statId, seeds } = await readJson(req);
+      let body;
+      try { body = await readJson(req); } catch (e) { return send(res, e.status, { error: e.message }); }
+      const { league, statId, seeds } = body ?? {}; // non-objects fall through to the 400s below
       if (typeof league !== 'string' || !/^[\w '-]{1,64}$/.test(league)) return send(res, 400, { error: 'bad league' });
       if (typeof statId !== 'string' || !/^explicit\.pseudo_timeless_jewel_[a-z]+$/.test(statId)) return send(res, 400, { error: 'bad statId' });
       if (!Array.isArray(seeds) || !seeds.length || seeds.length > MAX_SEEDS || !seeds.every((s) => Number.isInteger(s) && s > 0 && s < 1e6)) {
@@ -233,7 +237,7 @@ const server = createServer(async (req, res) => {
   }
 });
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (fileURLToPath(import.meta.url) === process.argv[1]) {
   if (!process.env.CONTACT) console.warn('CONTACT is not set: GGG asks API clients to include a contact in the User-Agent.');
   server.listen(port, host, () => console.log(`http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`));
 }
