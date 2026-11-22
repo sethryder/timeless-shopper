@@ -1,6 +1,7 @@
 // node build.mjs — downloads GGG's tree export + Path of Building's timeless jewel tables (both pinned),
 // writes web/data.json and web/lut/*.zip. Downloads are cached in .cache/.
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 
 // Pinned upstream commits. scripts/update-pins.mjs (run daily by .github/workflows/update-data.yml) rewrites these.
 export const PINS = {
@@ -174,4 +175,4 @@ async function main() {
   console.log(`wrote web/data.json: ${nodes.length} nodes, ${nodes.filter((n) => n.lut !== undefined).length} notables with LUT data, ${names.length} names`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) await main();
+if (fileURLToPath(import.meta.url) === process.argv[1]) await main();

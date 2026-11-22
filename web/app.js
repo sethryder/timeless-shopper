@@ -17,7 +17,11 @@ const byId = new Map(data.nodes.map((n) => [n.id, n]));
 const jewels = data.jewels;
 const luts = new Map(); // jewel type -> Promise<Uint8Array>, loaded on first use
 const lutFor = (j) => {
-  if (!luts.has(j.type)) luts.set(j.type, fetch(j.lut).then((r) => r.arrayBuffer()).then(inflate));
+  if (!luts.has(j.type)) {
+    const p = fetch(j.lut).then((r) => { if (!r.ok) throw new Error(`server answered ${r.status}`); return r.arrayBuffer(); }).then(inflate);
+    p.catch(() => luts.delete(j.type)); // a failed download is retried on the next socket click
+    luts.set(j.type, p);
+  }
   return luts.get(j.type);
 };
 
@@ -162,6 +166,7 @@ function leaveSocket() {
 function pickSocket(n) {
   s.socket = n;
   s.marks.clear();
+  s.keys = null; // picked from the old ring's notables
   const R = data.radius * 1.1;
   svg.setAttribute('viewBox', `${n.x - R} ${n.y - R} ${2 * R} ${2 * R}`);
   $('back').hidden = false;
@@ -265,7 +270,10 @@ function fillJewel() {
 $('jewel').replaceChildren(...jewels.map((j) => new Option(j.name, j.name, false, j === s.jewel)));
 $('jewel').onchange = () => { s.jewel = jewels.find((j) => j.name === $('jewel').value); s.wanted = []; s.pinned = null; fillJewel(); renderWanted(); runSearch(); };
 $('conq').onchange = () => { s.conq = $('conq').value; update(); }; // conqueror only changes the keystone, not notables
-$('maxDist').oninput = () => { renderWanted(); update(); };
+// ponytail: typing re-ranks after a pause (rank() can take ~0.4 s); make rank cheaper if clicks start to feel slow too.
+let updateTimer;
+const updateSoon = () => { clearTimeout(updateTimer); updateTimer = setTimeout(update, 200); };
+$('maxDist').oninput = () => { renderWanted(); updateSoon(); };
 $('league').onchange = () => { store('league', $('league').value); update(); };
 
 // Check one specific jewel: switch to its jewel/conqueror and show that seed.
@@ -351,10 +359,10 @@ function renderWanted() {
     del.onclick = () => { s.wanted.splice(s.wanted.indexOf(w), 1); renderWanted(); update(); };
     const [weight, maxIn, must] = card.querySelectorAll('input');
     weight.value = w.weight;
-    weight.oninput = () => { w.weight = Number(weight.value) || 0; update(); };
+    weight.oninput = () => { w.weight = Number(weight.value) || 0; updateSoon(); };
     maxIn.value = w.max ?? '';
     maxIn.placeholder = fallback || 'any';
-    maxIn.oninput = () => { w.max = maxIn.value === '' ? null : Number(maxIn.value); update(); };
+    maxIn.oninput = () => { w.max = maxIn.value === '' ? null : Number(maxIn.value); updateSoon(); };
     must.checked = w.must;
     must.onchange = () => { w.must = must.checked; update(); };
     return card;
@@ -369,10 +377,15 @@ async function runSearch() {
   s.inRadius = new Set(radiusNodes.map((n) => n.id));
   for (const [a, b, line] of edgeEls) line.classList.toggle('in', s.inRadius.has(a) && s.inRadius.has(b));
   const nodes = radiusNodes.filter((n) => n.lut !== undefined);
-  const jewel = s.jewel;
+  const jewel = s.jewel, socket = s.socket;
+  s.search = null; // the old one belongs to another jewel or socket
   if (!luts.has(jewel.type)) $('status').textContent = `Loading ${jewel.name} data…`;
-  const lut = await lutFor(jewel);
-  if (jewel !== s.jewel) return; // user switched jewel while loading
+  let lut;
+  try { lut = await lutFor(jewel); } catch (e) {
+    if (jewel === s.jewel && socket === s.socket) $('status').textContent = `Couldn't load ${jewel.name} data (${e.message}). Click the socket to try again.`;
+    return;
+  }
+  if (jewel !== s.jewel || socket !== s.socket) return; // user moved on while loading
   s.search = { nodes, keystones: radiusNodes.filter((n) => n.kind === 'k'), seeds: seedsOf(jewel), raw: lookup(jewel, lut, nodes.map((n) => n.lut)) };
   update();
 }
@@ -582,13 +595,22 @@ nodeLayer.addEventListener('mouseleave', () => (tip.hidden = true));
 
 // --- live prices (needs serve.mjs; hidden on a plain static host) ---
 let relayOk = false;
-fetch('api/leagues').then((r) => (r.ok ? r.json() : Promise.reject())).then((leagues) => {
+const loadLeagues = (tries = 5) => fetch('api/leagues').then(async (r) => {
+  if (r.status === 404) return; // plain static host: no relay
+  if (!r.ok) throw new Error(`relay answered ${r.status}`);
+  const leagues = await r.json();
   relayOk = true;
+  $('priceStatus').textContent = '';
   if (!leagues.length) return;
   $('league').replaceChildren(...leagues.map((l) => new Option(l)));
   $('league').value = leagues.includes(load('league')) ? load('league') : leagues[0]; // current challenge league first
   update();
-}).catch(() => {});
+}).catch(() => {
+  // Relay there but GGG's league list didn't come through: links would quietly point at Standard, so say so and retry.
+  $('priceStatus').textContent = `Couldn't load the league list${tries > 1 ? ', retrying' : ''}. Trade links use the league picked above.`;
+  if (tries > 1) setTimeout(() => loadLeagues(tries - 1), 30_000);
+});
+loadLeagues();
 
 function priceCell(el, p) {
   if (!p) return;
