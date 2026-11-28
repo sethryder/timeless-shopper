@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 // Pinned upstream commits. scripts/update-pins.mjs (run daily by .github/workflows/update-data.yml) rewrites these.
 export const PINS = {
   ggg: '550fb34ae7fca9ec4d760a2ac845bb2ba1032ec3', // grindinggear/skilltree-export
-  pob: '343b054ce6f6d9abab9e101d17cd27e2cf15f8a5', // PathOfBuildingCommunity/PathOfBuilding
+  pob: '5606cc64fa9f15694e69001a52b90aa968d01a86', // PathOfBuildingCommunity/PathOfBuilding
 };
 export const POB_DIR = 'src/Data/TimelessJewelData';
 const GGG = `https://raw.githubusercontent.com/grindinggear/skilltree-export/${PINS.ggg}`;
